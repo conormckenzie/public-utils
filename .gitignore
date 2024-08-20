@@ -1,3 +1,11 @@
+# Project-specific ignored files
+.copyignore
+code.copy
+combine_code.conf
+
+# Temporary files
+*~
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

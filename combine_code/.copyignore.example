@@ -1,0 +1,78 @@
+# Custom files to Ignore
+_commentedOut/
+
+# Ignore C# build results
+bin/
+obj/
+[Bb]uild/
+[Ll]og/
+
+# Ignore NuGet packages
+*.nupkg
+.nuget/
+packages/
+
+# Ignore Visual Studio temporary files, build results, and
+# user-specific files
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.pdb
+*.cache
+*.ilk
+*.log
+*.ncb
+*.sdf
+*.opendb
+*.tlog
+*.tmp_proj
+*.lastbuildstate
+*.aps
+*.pch
+*.dbmdl
+*.mdf
+*.ldf
+*.ndb
+*.svclog
+
+# Ignore Rider and other JetBrains IDEs specific files
+.idea/
+*.DotSettings.user
+
+# Ignore Python bytecode and cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Ignore Python virtual environments
+venv/
+ENV/
+env/
+.venv/
+
+# Ignore Python package directories
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Ignore Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Ignore VS Code specific files
+.vscode/
+*.code-workspace
+
+# Ignore general temporary files
+*.tmp
+*.temp
+*.log
+*.swp
+*.bak
+*.old
+
+# Ignore macOS and Windows system files
+.DS_Store
+[Tt]humbs.db
