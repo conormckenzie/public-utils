@@ -46,9 +46,12 @@ for package in "${REQUIRED_PACKAGES[@]}"; do
     fi
 done
 
-# Run combine_code.py
-echo "Running combine_code.py..."
-python "$SCRIPT_DIR/combine_code.py"
+# Pass the --debug flag to the Python script if provided
+if [[ "$1" == "--debug" ]]; then
+    python "$SCRIPT_DIR/combine_code.py" --debug
+else
+    python "$SCRIPT_DIR/combine_code.py"
+fi
 
 # Deactivate the virtual environment after running the script
 deactivate
