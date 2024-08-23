@@ -1,5 +1,6 @@
 # Project-specific ignored files
 .copyignore
+.copyinclude
 code.copy
 combine_code.conf
 

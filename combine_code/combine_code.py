@@ -5,8 +5,10 @@ import sys
 # Constants
 OUTPUT_FILE = "code.copy"
 IGNORE_FILE = ".copyignore"
+INCLUDE_FILE = ".copyinclude"
 CONFIG_FILE = "combine_code.conf"
 DEBUG_MODE = False  # Global variable to track debug mode
+MODE = "blacklist"  # Default mode is blacklist
 
 # Function to load root directory from config file
 def load_root_directory_from_config(config_file):
@@ -32,21 +34,22 @@ def get_root_directory_from_user():
     
     return root_dir
 
-# Read ignore patterns from .copyignore file
-def load_ignore_patterns(ignore_file):
-    if os.path.exists(ignore_file):
-        with open(ignore_file, 'r') as f:
+# Function to load patterns from a file
+def load_patterns(pattern_file):
+    if os.path.exists(pattern_file):
+        with open(pattern_file, 'r') as f:
             return [line.strip() for line in f if line.strip() and not line.startswith('#')]
     return []
 
-def should_ignore(path, ignore_patterns):
+# Function to check if a file should be ignored (blacklist mode) or included (whitelist mode)
+def should_process(path, patterns):
     normalized_path = os.path.normpath(path)
     relative_path = os.path.relpath(normalized_path)
 
     if DEBUG_MODE:
         print(f"Checking path: {relative_path}")  # Debugging output
 
-    for pattern in ignore_patterns:
+    for pattern in patterns:
         normalized_pattern = os.path.normpath(pattern)
 
         if DEBUG_MODE:
@@ -54,39 +57,49 @@ def should_ignore(path, ignore_patterns):
 
         # Check if the pattern represents a directory and matches part of the path
         if normalized_pattern in relative_path:
-            if DEBUG_MODE:
-                print(f"  Ignoring {relative_path} because it is inside directory {normalized_pattern}")
-            return True
+            if MODE == "blacklist":
+                if DEBUG_MODE:
+                    print(f"  Ignoring {relative_path} because it is inside directory {normalized_pattern}")
+                return False  # In blacklist mode, skip the file
+            else:
+                if DEBUG_MODE:
+                    print(f"  Including {relative_path} because it is inside directory {normalized_pattern}")
+                return True  # In whitelist mode, include the file
         
         # Check if the pattern matches the full path or the filename
         if fnmatch.fnmatch(relative_path, normalized_pattern) or fnmatch.fnmatch(os.path.basename(relative_path), normalized_pattern):
-            if DEBUG_MODE:
-                print(f"  Ignoring {relative_path} because it matches pattern {normalized_pattern}")
-            return True
+            if MODE == "blacklist":
+                if DEBUG_MODE:
+                    print(f"  Ignoring {relative_path} because it matches pattern {normalized_pattern}")
+                return False  # In blacklist mode, skip the file
+            else:
+                if DEBUG_MODE:
+                    print(f"  Including {relative_path} because it matches pattern {normalized_pattern}")
+                return True  # In whitelist mode, include the file
 
     if DEBUG_MODE:
-        print(f"  Not ignoring {relative_path}")  # Debugging output for paths not ignored
-    return False
+        print(f"  Not {('ignoring' if MODE == 'blacklist' else 'including')} {relative_path}")  # Debugging output for paths not ignored
+    return MODE == "blacklist"  # In blacklist mode, process the file if no match; in whitelist mode, skip it if no match
 
 # Generate the directory and file structure
-def generate_structure(root_dir, ignore_patterns):
+def generate_structure(root_dir, patterns):
     structure = []
     for dirpath, dirnames, filenames in os.walk(root_dir):
         dir_structure = f"{dirpath}/"
         structure.append(dir_structure)
         
         for filename in filenames:
-            if not should_ignore(os.path.join(dirpath, filename), ignore_patterns):
+            if should_process(os.path.join(dirpath, filename), patterns):
                 structure.append(f"    {filename}")
     return structure
 
 # Combine files into a single output file
-def combine_files(root_dir, output_file, ignore_patterns):
+def combine_files(root_dir, output_file, patterns):
     with open(output_file, 'w', encoding='utf-8') as out_f:
         for dirpath, dirnames, filenames in os.walk(root_dir):
             for filename in filenames:
                 file_path = os.path.join(dirpath, filename)
-                if not should_ignore(file_path, ignore_patterns):
+                if should_process(file_path, patterns):
                     if DEBUG_MODE:
                         print(f"Processing file: {file_path}")  # Debugging output
                     out_f.write(f"\n\n==== File: {file_path} ====\n\n")
@@ -99,10 +112,20 @@ def combine_files(root_dir, output_file, ignore_patterns):
 
 # Main function
 def main():
-    global DEBUG_MODE
+    global DEBUG_MODE, MODE
 
+    # Prompt user for debug mode
     if "--debug" in sys.argv:
         DEBUG_MODE = True
+
+    # Ask user to choose mode
+    while True:
+        mode_choice = input("Choose mode: (1) Blacklist (default) or (2) Whitelist: ").strip()
+        if mode_choice in ["1", "2"]:
+            MODE = "whitelist" if mode_choice == "2" else "blacklist"
+            break
+        else:
+            print("Invalid choice. Please enter 1 for Blacklist or 2 for Whitelist.")
 
     # Attempt to load root directory from config file
     root_dir = load_root_directory_from_config(CONFIG_FILE)
@@ -121,14 +144,14 @@ def main():
         print(f"Error: The specified root directory '{root_dir}' does not exist.")
         return
 
-    # Load ignore patterns
-    ignore_patterns = load_ignore_patterns(IGNORE_FILE)
+    # Load patterns based on mode
+    patterns = load_patterns(INCLUDE_FILE if MODE == "whitelist" else IGNORE_FILE)
 
     # Generate directory structure
-    structure = generate_structure(root_dir, ignore_patterns)
+    structure = generate_structure(root_dir, patterns)
     
     # Combine files into the output file
-    combine_files(root_dir, OUTPUT_FILE, ignore_patterns)
+    combine_files(root_dir, OUTPUT_FILE, patterns)
 
     # Append directory structure at the end of the output file
     with open(OUTPUT_FILE, 'a', encoding='utf-8') as out_f:
