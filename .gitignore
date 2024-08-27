@@ -2,7 +2,7 @@
 .copyignore
 .copyinclude
 code.copy
-combine_code.conf
+combine_code_config.json
 
 # Temporary files
 *~

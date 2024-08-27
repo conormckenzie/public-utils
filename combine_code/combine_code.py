@@ -1,6 +1,7 @@
 import os
 import fnmatch
 import sys
+import json
 
 # Constants
 OUTPUT_FILE = "code.copy"
@@ -9,29 +10,54 @@ INCLUDE_FILE = ".copyinclude"
 CONFIG_FILE = "combine_code.conf"
 DEBUG_MODE = False  # Global variable to track debug mode
 MODE = "blacklist"  # Default mode is blacklist
+MAX_RECENT_PATHS = 5  # Maximum number of recent paths to store
 
-# Function to load root directory from config file
-def load_root_directory_from_config(config_file):
+# Function to load recent directories from config file
+def load_recent_directories_from_config(config_file):
     if os.path.exists(config_file):
         with open(config_file, 'r') as f:
-            line = f.readline().strip()
-            if line.startswith("ROOT_DIRECTORY="):
-                return line.split("=", 1)[1]
-    return None
+            try:
+                data = json.load(f)
+                return data.get("recent_paths", [])
+            except json.JSONDecodeError:
+                return []
+    return []
+
+# Function to save recent directories to config file
+def save_recent_directories_to_config(config_file, recent_paths):
+    data = {"recent_paths": recent_paths}
+    with open(config_file, 'w') as f:
+        json.dump(data, f, indent=4)  # Saving JSON in a prettified format with indentation
 
 # Function to prompt the user for the root directory
 def get_root_directory_from_user():
+    recent_paths = load_recent_directories_from_config(CONFIG_FILE)
+
+    if recent_paths:
+        print("Recent paths:")
+        for i, path in enumerate(recent_paths):
+            print(f"{i + 1}. {path}")
+        print("0. Enter a new path")
+
+        choice = input("Choose a recent path or enter 0 to input a new path: ").strip()
+
+        if choice.isdigit():
+            choice = int(choice)
+            if 0 < choice <= len(recent_paths):
+                return recent_paths[choice - 1]
+
     root_dir = input("Enter the path of the root directory: ").strip()
     while not os.path.exists(root_dir):
         print("The specified path does not exist. Please try again.")
         root_dir = input("Enter the path of the root directory: ").strip()
-    
-    save_to_config = input(f"Would you like to save this path to {CONFIG_FILE} for future use? (y/n): ").strip().lower()
-    if save_to_config == 'y':
-        with open(CONFIG_FILE, 'w') as f:
-            f.write(f"ROOT_DIRECTORY={root_dir}")
-        print(f"Root directory saved to {CONFIG_FILE}.")
-    
+
+    if root_dir not in recent_paths:
+        recent_paths.insert(0, root_dir)
+        if len(recent_paths) > MAX_RECENT_PATHS:
+            recent_paths.pop()
+
+    save_recent_directories_to_config(CONFIG_FILE, recent_paths)
+
     return root_dir
 
 # Function to load patterns from a file
@@ -127,17 +153,8 @@ def main():
         else:
             print("Invalid choice. Please enter 1 for Blacklist or 2 for Whitelist.")
 
-    # Attempt to load root directory from config file
-    root_dir = load_root_directory_from_config(CONFIG_FILE)
-    
-    if root_dir:
-        use_saved_dir = input(f"Would you like to use the saved root directory '{root_dir}'? (y/n): ").strip().lower()
-        if use_saved_dir != 'y':
-            # If user opts not to use the saved directory, prompt for a new one
-            root_dir = get_root_directory_from_user()
-    else:
-        # If config file doesn't exist or root directory is not found, prompt the user
-        root_dir = get_root_directory_from_user()
+    # Prompt user for root directory
+    root_dir = get_root_directory_from_user()
 
     # Ensure the root directory path is valid
     if not os.path.exists(root_dir):
