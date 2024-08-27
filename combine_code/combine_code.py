@@ -7,7 +7,7 @@ import json
 OUTPUT_FILE = "code.copy"
 IGNORE_FILE = ".copyignore"
 INCLUDE_FILE = ".copyinclude"
-CONFIG_FILE = "combine_code.conf"
+CONFIG_FILE = "combine_code_config.json"  # Updated config file name to reflect JSON format
 DEBUG_MODE = False  # Global variable to track debug mode
 MODE = "blacklist"  # Default mode is blacklist
 MAX_RECENT_PATHS = 5  # Maximum number of recent paths to store
@@ -67,7 +67,7 @@ def load_patterns(pattern_file):
             return [line.strip() for line in f if line.strip() and not line.startswith('#')]
     return []
 
-# Function to check if a file should be ignored (blacklist mode) or included (whitelist mode)
+# Function to check if a path should be processed based on the selected mode (whitelist or blacklist)
 def should_process(path, patterns):
     normalized_path = os.path.normpath(path)
     relative_path = os.path.relpath(normalized_path)
@@ -81,7 +81,7 @@ def should_process(path, patterns):
         if DEBUG_MODE:
             print(f"  Against pattern: {pattern} (normalized: {normalized_pattern})")  # Debugging output
 
-        # Check if the pattern represents a directory and matches part of the path
+        # Check if the pattern represents a directory or a file and matches the path
         if normalized_pattern in relative_path:
             if MODE == "blacklist":
                 if DEBUG_MODE:
@@ -97,25 +97,29 @@ def should_process(path, patterns):
             if MODE == "blacklist":
                 if DEBUG_MODE:
                     print(f"  Ignoring {relative_path} because it matches pattern {normalized_pattern}")
-                return False  # In blacklist mode, skip the file
+                return False  # In blacklist mode, skip the file or directory
             else:
                 if DEBUG_MODE:
                     print(f"  Including {relative_path} because it matches pattern {normalized_pattern}")
-                return True  # In whitelist mode, include the file
+                return True  # In whitelist mode, include the file or directory
 
     if DEBUG_MODE:
         print(f"  Not {('ignoring' if MODE == 'blacklist' else 'including')} {relative_path}")  # Debugging output for paths not ignored
-    return MODE == "blacklist"  # In blacklist mode, process the file if no match; in whitelist mode, skip it if no match
+    return MODE == "blacklist"  # In blacklist mode, process if no match; in whitelist mode, skip if no match
 
 # Generate the directory and file structure
-def generate_structure(root_dir, patterns):
+def generate_structure(root_dir, patterns, apply_filter_to_structure):
     structure = []
     for dirpath, dirnames, filenames in os.walk(root_dir):
+        if apply_filter_to_structure and not should_process(dirpath, patterns):
+            continue  # Skip this directory if it should be ignored based on the filter
+
         dir_structure = f"{dirpath}/"
         structure.append(dir_structure)
         
         for filename in filenames:
-            if should_process(os.path.join(dirpath, filename), patterns):
+            file_path = os.path.join(dirpath, filename)
+            if not apply_filter_to_structure or should_process(file_path, patterns):
                 structure.append(f"    {filename}")
     return structure
 
@@ -153,6 +157,9 @@ def main():
         else:
             print("Invalid choice. Please enter 1 for Blacklist or 2 for Whitelist.")
 
+    # Ask user if they want to apply the filter to the directory structure
+    apply_filter_to_structure = input("Apply the filter to the directory structure? (y/n): ").strip().lower() == 'y'
+
     # Prompt user for root directory
     root_dir = get_root_directory_from_user()
 
@@ -165,7 +172,7 @@ def main():
     patterns = load_patterns(INCLUDE_FILE if MODE == "whitelist" else IGNORE_FILE)
 
     # Generate directory structure
-    structure = generate_structure(root_dir, patterns)
+    structure = generate_structure(root_dir, patterns, apply_filter_to_structure)
     
     # Combine files into the output file
     combine_files(root_dir, OUTPUT_FILE, patterns)
