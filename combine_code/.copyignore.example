@@ -1,6 +1,7 @@
 # Custom files to Ignore
-_commentedOut/
+*.~
 .git/
+code.copy
 
 # Ignore C# build results
 bin/

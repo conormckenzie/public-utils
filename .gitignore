@@ -5,7 +5,7 @@ code.copy
 combine_code_config.json
 
 # Temporary files
-*~
+*.~
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
