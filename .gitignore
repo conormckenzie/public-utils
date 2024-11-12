@@ -4,6 +4,8 @@
 code.copy
 combine_code_config.json
 
+.script_runner_recent
+
 # Temporary files
 *.~
 
