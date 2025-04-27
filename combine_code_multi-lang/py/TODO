@@ -1,0 +1,2 @@
+- Fix python script does not match wildcards correctly.
+    - Switch to use .gitignore scheme implementation
